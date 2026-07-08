@@ -1076,7 +1076,7 @@ export class ServerManagerView {
       for (const tab of this.tabs) {
         if (tab instanceof ServerTab) {
           (async () => {
-            (await tab.webview).getWebContents().setAudioMuted(state);
+            (await tab.webview).send("toggle-silent", state);
           })();
         }
       }

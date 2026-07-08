@@ -18,6 +18,7 @@ export type ElectronBridge = {
     options: NotificationOptions,
     dispatch: (type: string, eventInit: EventInit) => boolean,
   ) => NotificationData;
+  play_notification_sound: (sound_path: string) => void;
   get_idle_on_system: () => boolean;
   get_last_active_on_system: () => number;
   get_send_notification_reply_message_supported: () => boolean;
@@ -59,6 +60,27 @@ const electron_bridge: ElectronBridge = {
     options: NotificationOptions,
     dispatch: (type: string, eventInit: EventInit) => boolean,
   ): NotificationData => newNotification(title, options, dispatch),
+
+  play_notification_sound(sound_path: string): void {
+    // Only accept the page's own notification-sound files, so a
+    // compromised page can't make us play arbitrary audio. The main
+    // process gates on silent mode and plays it outside the webview.
+    let resolved: URL;
+    try {
+      resolved = new URL(sound_path, globalThis.location.origin);
+    } catch {
+      return;
+    }
+
+    if (
+      resolved.origin !== globalThis.location.origin ||
+      !resolved.pathname.startsWith("/static/audio/notification_sounds/")
+    ) {
+      return;
+    }
+
+    ipcRenderer.send("play-notification-sound", resolved.href);
+  },
 
   get_idle_on_system: (): boolean => idle,
 

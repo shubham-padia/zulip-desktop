@@ -275,6 +275,14 @@ function createMainWindow(): BrowserWindow {
     event.returnValue = ConfigUtil.getConfigItem("silent", false);
   });
 
+  ipcMain.on("play-notification-sound", (event, url: string) => {
+    if (ConfigUtil.getConfigItem("silent", false)) {
+      return;
+    }
+
+    send(mainWindow.webContents, "play-notification-sound", url);
+  });
+
   ipcMain.handle("get-server-settings", async (event, domain: string) =>
     _getServerSettings(domain, ses),
   );

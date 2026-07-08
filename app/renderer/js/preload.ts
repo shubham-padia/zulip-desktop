@@ -1,6 +1,10 @@
 import {contextBridge} from "electron/renderer";
 
-import electron_bridge, {BridgeEvent, bridgeEvents} from "./electron-bridge.ts";
+import electron_bridge, {
+  BridgeEvent,
+  bridgeEvents,
+  disableNotificationSoundGateEvent,
+} from "./electron-bridge.ts";
 import * as NetworkError from "./pages/network.ts";
 import {ipcRenderer} from "./typed-ipc-renderer.ts";
 
@@ -17,18 +21,25 @@ function installNotificationSoundGate(
   initiallySilent: boolean,
   muteEvent: string,
   unmuteEvent: string,
+  disableGate: string,
 ): void {
   let silent = initiallySilent;
+  // Disarmed once the web app declares it plays sounds via the bridge.
+  let armed = true;
   globalThis.addEventListener(muteEvent, () => {
     silent = true;
   });
   globalThis.addEventListener(unmuteEvent, () => {
     silent = false;
   });
+  globalThis.addEventListener(disableGate, () => {
+    armed = false;
+  });
 
   const nativePlay = HTMLMediaElement.prototype.play;
   HTMLMediaElement.prototype.play = async function (this: HTMLMediaElement) {
     if (
+      armed &&
       silent &&
       (this.currentSrc.includes("/static/audio/notification_sounds/") ||
         this.querySelector(
@@ -48,6 +59,7 @@ contextBridge.executeInMainWorld({
     ipcRenderer.sendSync("get-silent-setting"),
     muteEventName,
     unmuteEventName,
+    disableNotificationSoundGateEvent,
   ],
 });
 

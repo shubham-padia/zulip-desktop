@@ -19,6 +19,7 @@ export type ElectronBridge = {
     dispatch: (type: string, eventInit: EventInit) => boolean,
   ) => NotificationData;
   play_notification_sound: (sound_path: string) => void;
+  set_play_notification_sound_supported: (supported: boolean) => void;
   get_idle_on_system: () => boolean;
   get_last_active_on_system: () => number;
   get_send_notification_reply_message_supported: () => boolean;
@@ -43,6 +44,11 @@ export class BridgeEvent extends Event {
     super(type);
   }
 }
+
+// Tells the main-world gate to stop muting in-page notification sounds
+// once the web app plays them through the bridge instead.
+export const disableNotificationSoundGateEvent =
+  "zulip-desktop-disable-notification-sound-gate";
 
 /* eslint-disable @typescript-eslint/naming-convention -- public API */
 const electron_bridge: ElectronBridge = {
@@ -80,6 +86,13 @@ const electron_bridge: ElectronBridge = {
     }
 
     ipcRenderer.send("play-notification-sound", resolved.href);
+  },
+
+  set_play_notification_sound_supported(supported: boolean): void {
+    if (supported) {
+      // The web app owns sound playback now; disarm the in-page mute.
+      globalThis.dispatchEvent(new Event(disableNotificationSoundGateEvent));
+    }
   },
 
   get_idle_on_system: (): boolean => idle,
